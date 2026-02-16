@@ -4,7 +4,7 @@ if (!apiUrl) {
   if (process.env.NODE_ENV === 'development') {
     apiUrl = 'http://localhost:4000';
   } else {
-    apiUrl = 'https://distress-kml.up.railway.app';
+    apiUrl = 'https://kml-backend-production.up.railway.app';
   }
 }
 

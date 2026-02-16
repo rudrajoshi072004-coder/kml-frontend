@@ -31,7 +31,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "proxy": "https://distress-kml.up.railway.app",
+  "proxy": "https://kml-backend-production.up.railway.app",
   "eslintConfig": {
     "extends": [
       "react-app",
