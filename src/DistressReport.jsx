@@ -3,28 +3,56 @@ import { generateDistressReport } from "./ApiService";
 
 const CSV_HEADERS = [
   "Date_Period",
-  "Depth_m",
+  "Depth_mm",
   "Distress",
   "Length_m",
   "Width_m",
   "latitude",
   "longitude",
-  "chainage_",
-  "chainage",
+  "chainage_start",
+  "chainage_end",
   "Direction",
   "Lane",
 ];
 
-function jsonToCsv(data) {
+function normalizeKey(key) {
+  return String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function jsonToCsv(rows) {
   const headerLine = CSV_HEADERS.join(",");
-  const rows = (Array.isArray(data) ? data : []).map((item) =>
+  const bodyLines = (Array.isArray(rows) ? rows : []).map((item) =>
     CSV_HEADERS.map((key) => {
-      const raw = item && item[key] != null ? item[key] : "";
+      if (!item || typeof item !== "object") return '""';
+      const normalizedMap = {};
+      Object.entries(item).forEach(([k, v]) => {
+        const n = normalizeKey(k);
+        if (n && normalizedMap[n] === undefined) {
+          normalizedMap[n] = v;
+        }
+      });
+      const lookupKey = normalizeKey(key);
+      let raw = normalizedMap[lookupKey];
+      if (raw == null) {
+        const candidateKey =
+          Object.keys(normalizedMap).find(
+            (nk) =>
+              nk === lookupKey ||
+              nk.startsWith(lookupKey) ||
+              lookupKey.startsWith(nk) ||
+              nk.includes(lookupKey) ||
+              lookupKey.includes(nk)
+          ) || null;
+        if (candidateKey) {
+          raw = normalizedMap[candidateKey];
+        }
+      }
+      if (raw == null) raw = "";
       const str = String(raw).replace(/"/g, '""');
       return `"${str}"`;
     }).join(",")
   );
-  return [headerLine, ...rows].join("\r\n");
+  return [headerLine, ...bodyLines].join("\r\n");
 }
 
 export default function DistressReport() {
@@ -61,28 +89,43 @@ export default function DistressReport() {
 
     try {
       setLoading(true);
-      const formData = new FormData();
-      formData.append("start_date", startDate);
-      formData.append("end_date", endDate);
-      formData.append("file", file);
+      const data = await generateDistressReport({
+        file,
+        startDate,
+        endDate,
+      });
+      let rows = [];
+      if (Array.isArray(data)) {
+        rows = data;
+      } else if (data && Array.isArray(data.data)) {
+        rows = data.data;
+      } else if (data && Array.isArray(data.results)) {
+        rows = data.results;
+      } else if (data && typeof data === "object") {
+        rows = [data];
+      }
 
-      const data = await generateDistressReport(formData);
-      const csv = jsonToCsv(data);
-
-      if (!csv || csv.split("\n").length <= 1) {
+      if (!rows.length) {
         setErrorMessage("No data returned for the selected period.");
         return;
       }
 
+      const csv = jsonToCsv(rows);
+
       setCsvContent(csv);
       setSuccessMessage("Report generated successfully. You can now download the CSV file.");
     } catch (err) {
-      const detail =
-        (err &&
-          err.response &&
-          err.response.data &&
-          (err.response.data.detail || err.response.data.message)) ||
-        null;
+      let detail = null;
+      if (err && err.response && err.response.data) {
+        const data = err.response.data;
+        if (typeof data === "string") {
+          detail = data;
+        } else if (Array.isArray(data.detail)) {
+          detail = data.detail.map((d) => d.msg || d.detail).filter(Boolean).join("; ");
+        } else if (data.detail || data.message || data.error) {
+          detail = data.detail || data.message || data.error;
+        }
+      }
       setErrorMessage(
         detail || "Failed to generate report. Please check your input and try again."
       );
@@ -201,4 +244,3 @@ export default function DistressReport() {
     </main>
   );
 }
-

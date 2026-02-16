@@ -107,7 +107,7 @@ function MainKmlApp() {
                 type="button"
                 onClick={() => navigate("/distress-report")}
               >
-                <div className="landing-card-label">Distress Report</div>
+                <div className="landing-card-label">Distress Reported</div>
                 <div className="landing-card-description">
                   Prepare and manage distress reporting for your projects.
                 </div>
@@ -116,7 +116,7 @@ function MainKmlApp() {
                 </div>
               </button>
               <button className="landing-card landing-card-secondary">
-                <div className="landing-card-label">Distress Predator</div>
+                <div className="landing-card-label">Distress Predicted</div>
                 <div className="landing-card-description">
                   Advanced distress detection and analytics (coming soon).
                 </div>
