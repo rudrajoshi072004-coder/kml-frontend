@@ -1,7 +1,5 @@
 import axios from "axios";
-
-const IS_DEV = process.env.NODE_ENV === "development";
-const BASE_URL = IS_DEV ? "" : "https://distress-kml.up.railway.app";
+import API_URL from "./config";
 
 export async function generateDistressReport({ file, startDate, endDate }) {
   const params = new URLSearchParams();
@@ -12,12 +10,8 @@ export async function generateDistressReport({ file, startDate, endDate }) {
   formData.append("file", file);
 
   const query = params.toString();
-  const url = `${BASE_URL}/road-distressSinglepipeline${query ? `?${query}` : ""}`;
+  const url = `${API_URL}/api/distress-report${query ? `?${query}` : ""}`;
 
-  const response = await axios.post(url, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await axios.post(url, formData);
   return response.data;
 }
