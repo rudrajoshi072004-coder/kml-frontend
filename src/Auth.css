@@ -39,6 +39,7 @@
   border-radius: 4px;
   font-size: 1rem;
   box-sizing: border-box;
+  color: #000;
 }
 
 .auth-input-group input:focus {
