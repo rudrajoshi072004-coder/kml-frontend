@@ -517,8 +517,6 @@ body {
     font-size: 1.8rem;
   }
 }
-  color: #ecf0f1;
-}
 
 .leaflet-control-geosearch .results > *:hover {
   background-color: #54575b; /* Match hover theme */
