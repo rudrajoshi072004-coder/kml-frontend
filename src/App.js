@@ -1,14 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
-import MapComponent from './MapComponent';
-import PipelineView from './PipelineView';
-import Login from './Login';
-import Register from './Register';
-import { useAuth } from './AuthContext';
-import API_URL from './config';
+import React, { useState, useRef, useEffect } from "react";
+import "./App.css";
+import MapComponent from "./MapComponent";
+import PipelineView from "./PipelineView";
+import Login from "./Login";
+import Register from "./Register";
+import { useAuth } from "./AuthContext";
+import API_URL from "./config";
+import DistressReport from "./DistressReport";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-function App() {
+function MainKmlApp() {
   const { user, token, logout, loading: authLoading } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
@@ -276,6 +277,17 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/distress-report" element={<DistressReport />} />
+        <Route path="/*" element={<MainKmlApp />} />
+      </Routes>
+    </Router>
   );
 }
 
