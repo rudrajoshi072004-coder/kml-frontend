@@ -64,14 +64,14 @@ function MainKmlApp() {
   }
 
   if (!user) {
-    if (!showLanding) {
-      return isRegistering ? (
-        <Register onSwitchToLogin={() => setIsRegistering(false)} />
-      ) : (
-        <Login onSwitchToRegister={() => setIsRegistering(true)} />
-      );
-    }
+    return isRegistering ? (
+      <Register onSwitchToLogin={() => setIsRegistering(false)} />
+    ) : (
+      <Login onSwitchToRegister={() => setIsRegistering(true)} />
+    );
+  }
 
+  if (showLanding) {
     return (
       <div className="App landing-screen-root">
         <div className="landing-topbar">
