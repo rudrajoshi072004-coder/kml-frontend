@@ -7,10 +7,16 @@ import Register from "./Register";
 import { useAuth } from "./AuthContext";
 import API_URL from "./config";
 import DistressReport from "./DistressReport";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+} from "react-router-dom";
 
 function MainKmlApp() {
   const { user, token, logout, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const [showLanding, setShowLanding] = useState(true);
   const [chainage, setChainage] = useState('');
@@ -96,7 +102,11 @@ function MainKmlApp() {
                   <span className="landing-card-cta primary">Get Started</span>
                 </div>
               </button>
-              <button className="landing-card landing-card-secondary">
+              <button
+                className="landing-card landing-card-secondary"
+                type="button"
+                onClick={() => navigate("/distress-report")}
+              >
                 <div className="landing-card-label">Distress Report</div>
                 <div className="landing-card-description">
                   Prepare and manage distress reporting for your projects.
