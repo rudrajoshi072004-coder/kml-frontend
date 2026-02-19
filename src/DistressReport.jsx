@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { generateDistressReport } from "./ApiService";
+import { generateDistressFullpipelineDirect, generateDistressFullpipelineProxy } from "./ApiService";
 
 // Removing old JSON to CSV conversion as API now returns files directly
 
@@ -42,19 +42,29 @@ export default function DistressReport() {
 
     try {
       setLoading(true);
-      const { blob, filename } = await generateDistressReport({
-        file,
-        startDate,
-        endDate,
-        projectName,
-      });
+      let result;
+      try {
+        result = await generateDistressFullpipelineDirect({
+          file,
+          startDate,
+          endDate,
+          projectName,
+        });
+      } catch (_) {
+        result = await generateDistressFullpipelineProxy({
+          file,
+          startDate,
+          endDate,
+          projectName,
+        });
+      }
 
-      if (!blob) {
+      if (!result || !result.blob) {
         setErrorMessage("No data returned for the selected period.");
         return;
       }
 
-      setCsvBlob(blob);
+      setCsvBlob(result.blob);
       setSuccessMessage("Report generated successfully. You can now download the file.");
     } catch (err) {
       let detail = null;
