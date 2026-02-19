@@ -14,8 +14,24 @@ export async function generateDistressReport({ file, startDate, endDate, project
   const query = params.toString();
   const url = `${API_URL}/api/distress-report${query ? `?${query}` : ""}`;
 
-  const response = await axios.post(url, formData);
-  return response.data;
+  const response = await axios.post(url, formData, {
+    responseType: "blob",
+  });
+  let filename = "distress_report.xlsx";
+  const cd =
+    (response.headers && response.headers["content-disposition"]) ||
+    (response.headers && response.headers.get && response.headers.get("content-disposition"));
+  if (cd && typeof cd === "string") {
+    const match = cd.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+    if (match && match[1]) {
+      try {
+        filename = decodeURIComponent(match[1].replace(/\"/g, "").trim());
+      } catch (_) {
+        filename = match[1].replace(/\"/g, "").trim();
+      }
+    }
+  }
+  return { blob: response.data, filename };
 }
 
 export async function getDistressPredictedJson({ startDate, endDate, projectName }) {
@@ -174,10 +190,10 @@ export async function generateDistressFullpipelineDirect({
   if (endDate) params.set("end_date", endDate);
   const query = params.toString();
 
-  const postUrlPrimary = `https://distress-kml.up.railway.app/road-distress-fullpipeline/${query ? `?${query}` : ""}`;
-  const postUrlFallback = `https://distress-kml.up.railway.app/road-distressFullpipeline/${query ? `?${query}` : ""}`;
-  const dlUrlPrimary = `https://distress-kml.up.railway.app/road-distress-fullpipeline?${query}`;
-  const dlUrlFallback = `https://distress-kml.up.railway.app/road-distressFullpipeline?${query}`;
+  const postUrlPrimary = `https://distress-kml.up.railway.app/road-distress-fullpipeline_reported${query ? `?${query}` : ""}`;
+  const postUrlFallback = `https://distress-kml.up.railway.app/road-distress-fullpipeline/${query ? `?${query}` : ""}`;
+  const dlUrlPrimary = `https://distress-kml.up.railway.app/road-distress-fullpipeline_reported?${query}`;
+  const dlUrlFallback = `https://distress-kml.up.railway.app/road-distress-fullpipeline?${query}`;
 
   const formData = new FormData();
   if (projectName) formData.append("project_name", projectName);
@@ -357,7 +373,7 @@ export async function downloadDistressFullpipeline({ startDate, endDate }) {
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   const primary = `https://distress-kml.up.railway.app/road-distress-fullpipeline_reported?${params.toString()}`;
-  const fallback = `https://distress-kml.up.railway.app/road-distressFullpipeline?${params.toString()}`;
+  const fallback = `https://distress-kml.up.railway.app/road-distress-fullpipeline?${params.toString()}`;
   let response;
   try {
     response = await axios.get(primary, {

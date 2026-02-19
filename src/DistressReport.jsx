@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { generateDistressFullpipelineProxy, generateDistressFullpipelineDirect } from "./ApiService";
+import { generateDistressReport } from "./ApiService";
 
-
+// Removing old JSON to CSV conversion as API now returns files directly
 
 export default function DistressReport() {
   const [startDate, setStartDate] = useState("");
@@ -11,8 +11,7 @@ export default function DistressReport() {
   const [projectName, setProjectName] = useState("");
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [excelBlob, setExcelBlob] = useState(null);
-  const [serverFilename, setServerFilename] = useState("");
+  const [csvBlob, setCsvBlob] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
@@ -30,71 +29,33 @@ export default function DistressReport() {
     setFile(selected || null);
   };
 
-  const toYmd = (val) => {
-    if (!val) return val;
-    let s = String(val).trim().replace(/\//g, "-");
-    // Already YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // Convert DD-MM-YYYY -> YYYY-MM-DD
-    const m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (m) {
-      const dd = String(m[1]).padStart(2, "0");
-      const mm = String(m[2]).padStart(2, "0");
-      const yyyy = m[3];
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    return s;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSuccessMessage("");
     setErrorMessage("");
-    setExcelBlob(null);
+    setCsvBlob(null);
 
-    if (!startDate || !endDate || !file) {
-      setErrorMessage("Start date, end date, and KML file are required.");
+    if (!startDate || !endDate || !file || !projectName) {
+      setErrorMessage("Start date, end date, project name, and KML file are required.");
       return;
     }
 
     try {
       setLoading(true);
-      let result = null;
-      try {
-        result = await generateDistressFullpipelineProxy({
-          file,
-          startDate: toYmd(startDate),
-          endDate: toYmd(endDate),
-          projectName,
-        });
-      } catch (proxyErr) {
-        // If proxy is unavailable (404) or blocked, fallback to direct
-        result = await generateDistressFullpipelineDirect({
-          file,
-          startDate: toYmd(startDate),
-          endDate: toYmd(endDate),
-          projectName,
-        });
+      const { blob, filename } = await generateDistressReport({
+        file,
+        startDate,
+        endDate,
+        projectName,
+      });
+
+      if (!blob) {
+        setErrorMessage("No data returned for the selected period.");
+        return;
       }
-      setExcelBlob(result.blob);
-      setServerFilename(result.filename || "");
-      setSuccessMessage("Report generated successfully. Starting download...");
 
-      // --- AUTOMATIC DOWNLOAD START ---
-      const filename =
-        result.filename ||
-        `distress_report_${startDate || "start"}_${endDate || "end"}.xlsx`;
-      const blob = result.blob;
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-      // --- AUTOMATIC DOWNLOAD END ---
-
+      setCsvBlob(blob);
+      setSuccessMessage("Report generated successfully. You can now download the file.");
     } catch (err) {
       let detail = null;
       if (err && err.response && err.response.data) {
@@ -107,12 +68,8 @@ export default function DistressReport() {
           detail = data.detail || data.message || data.error;
         }
       }
-      const statusText =
-        err && err.response && err.response.status
-          ? ` [${err.response.status}]`
-          : "";
       setErrorMessage(
-        detail || `Failed to generate report.${statusText} Please check your input and try again.`
+        detail || "Failed to generate report. Please check your input and try again."
       );
     } finally {
       setLoading(false);
@@ -120,12 +77,13 @@ export default function DistressReport() {
   };
 
   const handleDownload = () => {
-    if (!excelBlob) return;
-    const filename =
-      serverFilename ||
-      `distress_report_${startDate || "start"}_${endDate || "end"}.xlsx`;
-    const blob = excelBlob;
-    const url = window.URL.createObjectURL(blob);
+    if (!csvBlob) return;
+    const safeStart = startDate || "start";
+    const safeEnd = endDate || "end";
+    const mime = csvBlob.type || "";
+    const ext = mime.includes("spreadsheetml") || mime.includes("excel") ? "xlsx" : "csv";
+    const filename = `distress_report_${safeStart}_${safeEnd}.${ext}`;
+    const url = window.URL.createObjectURL(csvBlob);
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", filename);
@@ -168,7 +126,7 @@ export default function DistressReport() {
               Distress Report Generator
             </h1>
             <p className="mt-2 text-sm text-slate-300">
-              Upload a KML file and select a date range to generate a structured road distress Excel
+              Upload a KML file and select a date range to generate a structured road distress CSV
               report.
             </p>
           </div>
@@ -220,10 +178,10 @@ export default function DistressReport() {
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter project name"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   className="rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/40"
-                  placeholder="Enter project name"
                   required
                 />
               </div>
@@ -269,10 +227,10 @@ export default function DistressReport() {
                 <button
                   type="button"
                   onClick={handleDownload}
-                  disabled={!excelBlob || loading}
+                  disabled={!csvBlob || loading}
                   className="inline-flex items-center justify-center rounded-full border border-slate-600/80 px-5 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-300 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
                 >
-                  Download Excel
+                  Download Report
                 </button>
               </div>
             </form>

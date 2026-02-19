@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import {
-  downloadDetectDistressFinalPredicted,
-  generateDistressFinalPredictedProxy,
-} from "./ApiService";
-import * as XLSX from "xlsx";
+import { downloadDetectPredictedDistressCombined } from "./ApiService";
 
 export default function DistressPredicted() {
   const [startDate, setStartDate] = useState("");
@@ -14,33 +10,10 @@ export default function DistressPredicted() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [csvBlob, setCsvBlob] = useState(null);
-  const [csvFilename, setCsvFilename] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const toArray = (data) => {
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.data)) return data.data;
-    if (data && Array.isArray(data.results)) return data.results;
-    if (data && Array.isArray(data.rows)) return data.rows;
-    return data ? [data] : [];
-  };
-
-  const toYmd = (val) => {
-    if (!val) return val;
-    let s = String(val).trim().replace(/\//g, "-");
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (m) {
-      const dd = String(m[1]).padStart(2, "0");
-      const mm = String(m[2]).padStart(2, "0");
-      const yyyy = m[3];
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    return s;
-  };
 
   const handleFileChange = (e) => {
     const selected = e.target.files && e.target.files[0];
@@ -60,82 +33,33 @@ export default function DistressPredicted() {
     setErrorMessage("");
     setCsvBlob(null);
 
-    if (!startDate || !endDate) {
-      setErrorMessage("Start date and end date are required.");
-      return;
-    }
-    if (!file) {
-      setErrorMessage("KML file is required for final predicted generation.");
+    if (!startDate || !endDate || !file) {
+      setErrorMessage("Start date, end date, and KML file are required.");
       return;
     }
 
     try {
       setLoading(true);
-      let blob;
-      let filenameToUse = "";
-      try {
-        const { blob: proxyBlob, filename: proxyName } = await generateDistressFinalPredictedProxy({
-          file,
-          startDate: toYmd(startDate),
-          endDate: toYmd(endDate),
-          projectName,
-        });
-        blob = proxyBlob;
-        filenameToUse = proxyName || "";
-        setCsvFilename(filenameToUse);
-      } catch (proxyErr) {
-        try {
-          const { blob: fileBlob, filename: directName } = await downloadDetectDistressFinalPredicted({
-            file,
-            startDate: toYmd(startDate),
-            endDate: toYmd(endDate),
-            projectName,
-          });
-          blob = fileBlob;
-          filenameToUse = directName || "";
-          setCsvFilename(filenameToUse);
-        } catch (directErr) {
-          throw proxyErr;
-        }
+      const { blob, filename } = await downloadDetectPredictedDistressCombined({
+        file,
+        startDate,
+        endDate,
+        projectName,
+      });
+      if (!blob) {
+        setErrorMessage("No data returned for the selected period.");
+        return;
       }
 
       setCsvBlob(blob);
-      setErrorMessage("");
+      // optional: remember server-provided filename for download
+      // not strictly required for functionality
       setSuccessMessage(
-        "Final predicted distress generated successfully. Starting download..."
+        "Predicted distress generated successfully. You can now download the Excel file."
       );
-
-      // --- AUTOMATIC DOWNLOAD START ---
-      const safeStart = startDate || "start";
-      const safeEnd = endDate || "end";
-      const mime = blob.type || "";
-      const ext =
-        mime.includes("spreadsheetml") || mime.includes("excel") ? "xlsx" : "csv";
-      const finalFilename =
-        filenameToUse && filenameToUse.toLowerCase().endsWith(".xlsx")
-          ? filenameToUse
-          : `distress_predicted_${safeStart}_${safeEnd}.${ext}`;
-
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.setAttribute("download", finalFilename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-      // --- AUTOMATIC DOWNLOAD END ---
-
     } catch (err) {
       let detail = null;
       const status = err && err.response && err.response.status;
-      if (!status && err && err.message && err.message.toLowerCase().includes("network")) {
-        setErrorMessage(
-          "Network error while contacting detect endpoint (likely CORS). Retrying via backend proxy failed."
-        );
-        setLoading(false);
-        return;
-      }
       if (err && err.response && err.response.data) {
         const data = err.response.data;
         if (data instanceof Blob) {
@@ -159,23 +83,18 @@ export default function DistressPredicted() {
         const trimmed = detail.trim().toLowerCase();
         if (trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html")) {
           detail =
-            "Service endpoint is not available. Please make sure the external API is reachable.";
+            "Service endpoint /api/distress-predicted is not available. Please make sure the backend server is running with the latest code.";
         }
       }
 
       if (!detail && status === 404) {
         detail =
-          "Service endpoint was not found (404). Please verify the API URL.";
+          "Service endpoint /api/distress-predicted was not found (404). Please make sure the backend server is running with the latest code.";
       }
 
-      const statusText =
-        err && err.response && err.response.status
-          ? ` [${err.response.status}]`
-          : "";
       setErrorMessage(
-        detail
-          ? `${detail}${statusText}`
-          : `Failed to generate predicted distress.${statusText} Please check your input and try again.`
+        detail ||
+        "Failed to generate predicted distress. Please check your input and try again."
       );
     } finally {
       setLoading(false);
@@ -189,10 +108,7 @@ export default function DistressPredicted() {
     const mime = csvBlob.type || "";
     const ext =
       mime.includes("spreadsheetml") || mime.includes("excel") ? "xlsx" : "csv";
-    const filename =
-      csvFilename && csvFilename.toLowerCase().endsWith(".xlsx")
-        ? csvFilename
-        : `distress_predicted_${safeStart}_${safeEnd}.${ext}`;
+    const filename = `distress_predicted_${safeStart}_${safeEnd}.${ext}`;
     const blob = csvBlob;
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -237,8 +153,8 @@ export default function DistressPredicted() {
               Distress Predicted Generator
             </h1>
             <p className="mt-2 text-sm text-slate-300">
-              Enter a date range and project name to generate a predicted
-              road distress report. Optionally upload a KML file to use the original CSV pipeline.
+              Upload a KML file and select a date range to generate a predicted
+              road distress CSV report.
             </p>
           </div>
           <div className="rounded-3xl border border-slate-700/70 bg-slate-900/60 p-6 shadow-2xl shadow-cyan-500/10 backdrop-blur-2xl">
@@ -289,10 +205,10 @@ export default function DistressPredicted() {
                 </label>
                 <input
                   type="text"
+                  placeholder="Enter project name"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   className="rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/40"
-                  placeholder="Enter project name"
                   required
                 />
               </div>
@@ -302,7 +218,7 @@ export default function DistressPredicted() {
                 </label>
                 <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-slate-600 bg-slate-900/80 px-3 py-2 text-sm text-slate-200 transition hover:border-cyan-400 hover:bg-slate-900">
                   <span className="truncate">
-                    {file ? file.name : "Choose .kml file (optional)"}
+                    {file ? file.name : "Choose .kml file"}
                   </span>
                   <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 shadow-lg shadow-cyan-500/20">
                     Browse
@@ -315,10 +231,10 @@ export default function DistressPredicted() {
                   />
                 </label>
                 <p className="mt-1 text-xs text-slate-400">
-                  Supported format: .kml. If provided, the original CSV pipeline will be used.
+                  Supported format: .kml only
                 </p>
               </div>
-              {errorMessage && !csvBlob && (
+              {errorMessage && (
                 <div className="rounded-lg border border-red-600/60 bg-red-900/40 px-3 py-2 text-xs text-red-100">
                   {errorMessage}
                 </div>
@@ -345,7 +261,7 @@ export default function DistressPredicted() {
                   disabled={!csvBlob || loading}
                   className="inline-flex items-center justify-center rounded-full border border-slate-600/80 px-5 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-300 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
                 >
-                  Download Excel
+                  Download CSV
                 </button>
               </div>
             </form>
