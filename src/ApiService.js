@@ -40,13 +40,16 @@ export async function registerFarmerGrapes(payload) {
 }
 
 export async function generateDistressPredicted({ file, startDate, endDate, projectName }) {
-  const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  formData.append("file", file);
-  if (projectName) formData.append("project_name", projectName);
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
 
-  const url = `${API_URL}/api/distress-predicted`;
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const query = params.toString();
+  const url = `${API_URL}/api/distress-predicted${query ? `?${query}` : ""}`;
 
   const response = await axios.post(url, formData, {
     responseType: "blob",
@@ -78,10 +81,12 @@ export async function downloadDetectPredictedDistressCombined({
   endDate,
   projectName,
 }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
+
   const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  if (projectName) formData.append("project_name", projectName);
   if (file) {
     try {
       const kmlFile = new File([file], file.name, {
@@ -92,7 +97,7 @@ export async function downloadDetectPredictedDistressCombined({
       formData.append("file", file);
     }
   }
-  const url = `https://distress-kml.up.railway.app/detect-distress-final_predicted/`;
+  const url = `https://distress-kml.up.railway.app/detect-distress-final_predicted/?${params.toString()}`;
   const response = await axios.post(url, formData, {
     responseType: "blob",
     headers: {
@@ -123,12 +128,14 @@ export async function generateDistressFullpipelineProxy({
   endDate,
   projectName,
 }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
+
   const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  if (projectName) formData.append("project_name", projectName);
   if (file) formData.append("file", file);
-  const url = `${API_URL}/api/distress-fullpipeline`;
+  const url = `${API_URL}/api/distress-fullpipeline?${params.toString()}`;
   const response = await axios.post(url, formData, {
     responseType: "blob",
     headers: {
@@ -240,10 +247,12 @@ export async function downloadDetectDistressFinalPredicted({
   endDate,
   projectName,
 }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
+
   const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  if (projectName) formData.append("project_name", projectName);
   if (file) {
     try {
       const kmlFile = new File([file], file.name, {
@@ -254,7 +263,7 @@ export async function downloadDetectDistressFinalPredicted({
       formData.append("kml", file);
     }
   }
-  const url = `https://distress-kml.up.railway.app/detect-distress-final_predicted/`;
+  const url = `https://distress-kml.up.railway.app/detect-distress-final_predicted/?${params.toString()}`;
   const response = await axios.post(url, formData, {
     responseType: "blob",
     headers: {
@@ -287,12 +296,14 @@ export async function generateDistressFinalPredictedProxy({
   endDate,
   projectName,
 }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
+
   const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  if (projectName) formData.append("project_name", projectName);
   if (file) formData.append("file", file);
-  const url = `${API_URL}/api/distress-final-predicted`;
+  const url = `${API_URL}/api/distress-final-predicted?${params.toString()}`;
   const response = await axios.post(url, formData, {
     responseType: "blob",
     headers: {
@@ -319,13 +330,15 @@ export async function generateDistressFinalPredictedProxy({
   return { blob: response.data, filename };
 }
 export async function triggerDistressFullpipeline({ file, startDate, endDate, projectName }) {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  if (projectName) params.set("project_name", projectName);
+
   const formData = new FormData();
-  if (startDate) formData.append("start_date", startDate);
-  if (endDate) formData.append("end_date", endDate);
-  if (projectName) formData.append("project_name", projectName);
   if (file) formData.append("file", file);
-  const primary = "https://distress-kml.up.railway.app/road-distress-fullpipeline_reported";
-  const fallback = "https://distress-kml.up.railway.app/road-distress-fullpipeline/";
+  const primary = `https://distress-kml.up.railway.app/road-distress-fullpipeline_reported?${params.toString()}`;
+  const fallback = `https://distress-kml.up.railway.app/road-distress-fullpipeline/?${params.toString()}`;
   try {
     const res = await axios.post(primary, formData);
     return res.data;
