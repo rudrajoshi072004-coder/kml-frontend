@@ -99,8 +99,30 @@ export default function DistressPredicted() {
       setCsvBlob(blob);
       setErrorMessage("");
       setSuccessMessage(
-        "Final predicted distress generated successfully. You can now download the Excel file."
+        "Final predicted distress generated successfully. Starting download..."
       );
+
+      // --- AUTOMATIC DOWNLOAD START ---
+      const safeStart = startDate || "start";
+      const safeEnd = endDate || "end";
+      const mime = blob.type || "";
+      const ext =
+        mime.includes("spreadsheetml") || mime.includes("excel") ? "xlsx" : "csv";
+      const finalFilename =
+        proxyName && proxyName.toLowerCase().endsWith(".xlsx")
+          ? proxyName
+          : `distress_predicted_${safeStart}_${safeEnd}.${ext}`;
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", finalFilename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      // --- AUTOMATIC DOWNLOAD END ---
+
     } catch (err) {
       let detail = null;
       const status = err && err.response && err.response.status;
@@ -117,7 +139,7 @@ export default function DistressPredicted() {
           try {
             const text = await data.text();
             if (text) detail = text;
-          } catch (_) {}
+          } catch (_) { }
         } else if (typeof data === "string") {
           detail = data;
         } else if (Array.isArray(data.detail)) {
@@ -232,7 +254,7 @@ export default function DistressPredicted() {
                         if (typeof e.target.showPicker === "function") {
                           e.target.showPicker();
                         }
-                      } catch (_) {}
+                      } catch (_) { }
                     }}
                     className="distress-date-input rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/40"
                     required
@@ -251,7 +273,7 @@ export default function DistressPredicted() {
                         if (typeof e.target.showPicker === "function") {
                           e.target.showPicker();
                         }
-                      } catch (_) {}
+                      } catch (_) { }
                     }}
                     className="distress-date-input rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/40"
                     required
