@@ -8,6 +8,10 @@ import { useAuth } from "./AuthContext";
 import API_URL from "./config";
 import DistressReport from "./DistressReport";
 import DistressPredicted from "./DistressPredicted";
+import InventoryCard from "./InventoryCard";
+import KMLSelection from "./KMLSelection";
+import KML1Form from "./KML1Form";
+import KML2Form from "./KML2Form";
 import {
   BrowserRouter as Router,
   Routes,
@@ -161,6 +165,7 @@ function MainKmlApp() {
                   <span className="landing-card-cta secondary">Get Started</span>
                 </div>
               </button>
+              <InventoryCard onGetStarted={() => navigate("/inventory/kml-1")} />
             </div>
           </div>
         </div>
@@ -354,6 +359,9 @@ function App() {
       <Routes>
         <Route path="/distress-report" element={<DistressReport />} />
         <Route path="/distress-predicted" element={<DistressPredicted />} />
+        <Route path="/inventory" element={<KMLSelection />} />
+        <Route path="/inventory/kml-1" element={<KML1Form />} />
+        <Route path="/inventory/kml-2" element={<KML2Form />} />
         <Route path="/*" element={<MainKmlApp />} />
       </Routes>
     </Router>
